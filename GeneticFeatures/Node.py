@@ -98,15 +98,15 @@ class Tree:
         self.root = None
         self.init_random()
 
-    def __get_random_node(self, curr, p = 0.15):
+    def __get_random_node(self, curr, p = 0.1):
         if np.random.rand() < p:
             return curr
 
         if curr.have_children:
             if np.random.rand() < 0.5:
-                return self.__get_random_node(curr.left, min(p * 1.01, 0.7))
+                return self.__get_random_node(curr.left, min(p + 0.025, 0.4))
             else:
-                return self.__get_random_node(curr.right, min(p * 1.01, 0.7))
+                return self.__get_random_node(curr.right, min(p + 0.025, 0.4))
 
         return curr
 

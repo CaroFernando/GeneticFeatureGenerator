@@ -57,16 +57,7 @@ class GeneticFeatureGenerator:
         best = generation[np.argmax(fitness)]
         best_fitness = np.max(fitness)
 
-        for i in range(self.maxiter):
-            if verbose:
-                print("Generation: ", i)
-                print("Best fitness: ", np.max(fitness))
-                print("Worst fitness: ", np.min(fitness))
-                print("Mean fitness: ", np.mean(fitness))
-                print("Median fitness: ", np.median(fitness))
-                print("Std fitness: ", np.std(fitness))
-                print("")
-
+        for it in range(self.maxiter):
             for i in generation:
                 # selecto two parents
                 p1 = np.random.choice(generation, p = fitness / np.sum(fitness))
@@ -90,6 +81,9 @@ class GeneticFeatureGenerator:
                 if child_fitness > best_fitness:
                     best = child.copy()
                     best_fitness = child_fitness
+
+            if verbose:
+                print("Iteration: ", it, "Best fitness: ", best_fitness, "Generation best", np.max(fitness), end = '\r')
 
         return best
 
