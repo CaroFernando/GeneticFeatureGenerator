@@ -4,30 +4,34 @@ import os
 import sys
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from Node import *
-
-from minepy import MINE
+from scipy.stats import rankdata
 
 class GeneticFeatureGenerator:
-    def __init__(self, data, target, operations, operation_names = None, popsize = 100, maxiter = 200, clone_prob = 0.3, mutation_rate = 0.05):
-        self.data = data
-        self.target = target
+    def __init__(self, operations, operation_names = None, popsize = 100, maxiter = 200, clone_prob = 0.3, mutation_rate = 0.05):
         self.operations = operations
         self.operation_names = operation_names
         self.popsize = popsize
         self.maxiter = maxiter
         self.clone_prob = clone_prob
         self.mutation_rate = mutation_rate
-        self.mine = MINE(alpha=0.6, c=15)
 
-    def objective_function(self, t):
-        res = t(self.data)
+    def corr(self, X, Y):
+        assert len(X) == len(Y)
+        n = len(X)
+        y_rank = rankdata(Y, method = 'ordinal')
+        y_rank = y_rank[X.argsort()]
+        sum_y_rank = np.abs(np.diff(y_rank)).sum()
+        return 1 - (3 * sum_y_rank) / (n*n - 1)
 
-        # if res is instance of float
+    def objective_function(self, t, data, target):
+        res = t(data)
         if isinstance(res, float):
             return 0
-
-        self.mine.compute_score(self.target, res)
-        return self.mine.mic()
+        
+        c = self.corr(res, target)
+        if c < 0 or np.isnan(c):
+            return 0
+        return c
 
     def crossover(self, t1, t2):
         random_prob = np.random.rand()
@@ -42,26 +46,26 @@ class GeneticFeatureGenerator:
     def mutate(self, t):
         t.random_paste_node(t.create_random_node())
 
-    def init_generation(self):
-        return [Tree(self.operations, self.data.shape[1], self.operation_names) for _ in range(self.popsize)]
+    def init_generation(self, no_cols):
+        return [Tree(self.operations, no_cols, self.operation_names) for _ in range(self.popsize)]
 
-    def optimize(self):
-        generation = self.init_generation()
-        print("Generation initialized")
-        fitness = [self.objective_function(t) for t in generation]
+    def optimize(self, data, target, verbose = False):
+        generation = self.init_generation(data.shape[1])
+        fitness = [self.objective_function(t, data, target) for t in generation]
         fitness = np.array(fitness)
 
         best = generation[np.argmax(fitness)]
         best_fitness = np.max(fitness)
 
         for i in range(self.maxiter):
-            print("Generation: ", i)
-            print("Best fitness: ", np.max(fitness))
-            print("Worst fitness: ", np.min(fitness))
-            print("Mean fitness: ", np.mean(fitness))
-            print("Median fitness: ", np.median(fitness))
-            print("Std fitness: ", np.std(fitness))
-            print("")
+            if verbose:
+                print("Generation: ", i)
+                print("Best fitness: ", np.max(fitness))
+                print("Worst fitness: ", np.min(fitness))
+                print("Mean fitness: ", np.mean(fitness))
+                print("Median fitness: ", np.median(fitness))
+                print("Std fitness: ", np.std(fitness))
+                print("")
 
             for i in generation:
                 # selecto two parents
@@ -73,7 +77,7 @@ class GeneticFeatureGenerator:
                 if np.random.rand() < self.mutation_rate:
                     self.mutate(child)
 
-                child_fitness = self.objective_function(child)
+                child_fitness = self.objective_function(child, data, target)
 
                 # choose a random individual index 
                 reverse_fitness = 1 - fitness
@@ -88,4 +92,36 @@ class GeneticFeatureGenerator:
                     best_fitness = child_fitness
 
         return best
+
+class MultiFeatureGenerator:
+    def __init__(self, data, target, feature_generator, no_splits, max_split_size, verbose = False):
+        self.data = data
+        self.target = target
+        self.no_splits = no_splits
+        self.max_split_size = max_split_size
+        self.splitsize = int(np.floor(self.data.shape[0] / self.no_splits))
+        self.indexes = np.arange(len(self.data), dtype=np.int32)
+        np.random.shuffle(self.indexes)
+        self.current_split = 0
+        self.feature_generator = feature_generator
+        self.verbose = verbose
+
+    def get_next_split(self):
+        if self.current_split >= self.no_splits:
+            raise StopIteration
+        else:
+            fixed_size = int(min(self.splitsize, self.max_split_size))
+            current_indexes = self.indexes[self.current_split * self.splitsize: self.current_split * self.splitsize + fixed_size]
+            self.current_split += 1
+            print("Split: ", self.current_split)
+            return self.feature_generator.optimize(self.data[current_indexes], self.target[current_indexes], self.verbose)
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        return self.get_next_split()
+
+    def __len__(self):
+        return self.no_splits
     
