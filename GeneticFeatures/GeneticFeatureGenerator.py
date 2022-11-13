@@ -84,7 +84,8 @@ class GeneticFeatureGenerator:
 
             if verbose:
                 print("Iteration: ", it, "Best fitness: ", best_fitness, "Generation best", np.max(fitness), end = '\r')
-
+        if verbose:
+            print()
         return best
 
 class MultiFeatureGenerator:
