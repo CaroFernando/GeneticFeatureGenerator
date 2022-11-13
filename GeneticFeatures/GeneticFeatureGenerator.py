@@ -88,9 +88,10 @@ class GeneticFeatureGenerator:
         return best
 
 class MultiFeatureGenerator:
-    def __init__(self, data, target, feature_generator, no_splits, max_split_size, verbose = False):
+    def __init__(self, data, target, feature_generator, no_features, no_splits, max_split_size, verbose = False):
         self.data = data
         self.target = target
+        self.no_features = no_features
         self.no_splits = no_splits
         self.max_split_size = max_split_size
         self.splitsize = int(np.floor(self.data.shape[0] / self.no_splits))
@@ -100,14 +101,19 @@ class MultiFeatureGenerator:
         self.feature_generator = feature_generator
         self.verbose = verbose
 
+        self.cont = 0
+
     def get_next_split(self):
-        if self.current_split >= self.no_splits:
+        if self.cont >= self.no_features:
             raise StopIteration
         else:
             fixed_size = int(min(self.splitsize, self.max_split_size))
             current_indexes = self.indexes[self.current_split * self.splitsize: self.current_split * self.splitsize + fixed_size]
+            
+            print("Split: ", self.current_split, "Feature: ", self.cont)
             self.current_split += 1
-            print("Split: ", self.current_split)
+            self.current_split %= self.no_splits
+            self.cont += 1
             return self.feature_generator.optimize(self.data[current_indexes], self.target[current_indexes], self.verbose)
 
     def __iter__(self):
