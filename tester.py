@@ -42,7 +42,6 @@ class tester:
         self.new_X_test = self.new_X_scaler.transform(self.new_X_test)
         self.y_train = self.target_scaler.transform(self.y_train.reshape(-1, 1)).reshape(-1)
         self.y_test = self.target_scaler.transform(self.y_test.reshape(-1, 1)).reshape(-1)
-        
 
         self.tests = pd.DataFrame(columns = ['Model', 'MSE', 'R2', 'MAE','NEW_MSE', 'NEW_R2', 'NEW_MAE'])
     
