@@ -15,12 +15,14 @@ class GeneticFeatureGenerator:
         self.clone_prob = clone_prob
         self.mutation_rate = mutation_rate
         self.max_tree_depth = max_tree_depth
+        self.y_rank = None
 
     def corr(self, X, Y):
-        assert len(X) == len(Y)
+        assert len(X) == len(Y), "X and Y must have the same length in order to calculate correlation"
         n = len(X)
-        y_rank = rankdata(Y, method = 'ordinal')
-        y_rank = y_rank[X.argsort()]
+        if self.y_rank is None:
+            self.y_rank = rankdata(Y, method = 'ordinal')
+        y_rank = self.y_rank[X.argsort()].copy()
         sum_y_rank = np.abs(np.diff(y_rank)).sum()
         return 1 - (3 * sum_y_rank) / (n*n - 1)
 
@@ -41,7 +43,6 @@ class GeneticFeatureGenerator:
             child.random_paste_node(t2.get_random_node())
         else:
             child.random_paste_node(t1.get_random_node())
-
         return child
 
     def mutate(self, t):
@@ -102,7 +103,6 @@ class MultiFeatureGenerator:
         self.current_split = 0
         self.feature_generator = feature_generator
         self.verbose = verbose
-
         self.cont = 0
 
     def get_next_split(self):

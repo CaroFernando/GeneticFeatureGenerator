@@ -7,7 +7,7 @@ class Node:
     left = None
     right = None
     have_children = False
-    depth = 0
+    depth = 1
 
     def __init__(self):
         pass
@@ -34,9 +34,9 @@ class Node:
         if self is None:
             return 0
         if self.have_children:
-            return max(self.left.get_max_depth(), self.right.get_max_depth())
+            return max(self.left.get_max_depth(), self.right.get_max_depth()) + 1
         else:
-            return self.depth
+            return 1
 
 class OperationNode(Node):
     def __init__(self, op, name = "OperationNode"):
@@ -90,8 +90,8 @@ class Tree:
         else:
             return ScalarNode(np.random.uniform(self.scalar_range[0], self.scalar_range[1]))
 
-    def create_random_node(self, curr_depth = 0):
-        # choose random type of node between operation, data and scalar 
+    def create_random_node(self, curr_depth = 1):
+        # choose random type of node between operation, data and scalar
         if curr_depth == self.max_init_depth:
             # choose only data or scalar
             return self.create_random_unit_node()
@@ -112,7 +112,7 @@ class Tree:
 
     def init_random(self):
         self.root = self.create_random_node()
-        self.root.update_depth(0)
+        self.root.update_depth(1)
 
     def __get_random_node(self, curr, p = 0.1):
         if np.random.rand() < p:
@@ -127,35 +127,36 @@ class Tree:
     def get_random_node(self):
         return self.__get_random_node(self.root).copy()
 
-    def __is_valid_depth(self, depth_a, depth_b):
-        return depth_a + depth_b <= self.max_init_depth
+    def __is_valid_depth(self, depth):
+        return depth <= self.max_init_depth
 
     def __update_probability(self, p):
         return min(p * 1.01, 0.7)
 
     def __random_replace(self, node, node_depth, curr, p = 0.15):
 
-        if curr.have_children:
+        if curr.have_children and self.__is_valid_depth(curr.depth + node_depth):
             if np.random.rand() < 0.5:
-                if curr.left.have_children and np.random.rand() > self.random_paste_prob and self.__is_valid_depth(node_depth, curr.left.depth):
+                if curr.left.have_children and np.random.rand() > self.random_paste_prob and self.__is_valid_depth(node_depth + curr.left.depth - 1):
                     self.__random_replace(node, node_depth, curr.left, self.__update_probability(p))
                 else:
                     curr.left = node.copy()
                     curr.left.update_depth(curr.depth + 1)
             else:
-                if curr.right.have_children and np.random.rand() > self.random_paste_prob and self.__is_valid_depth(node_depth, curr.right.depth):
+                if curr.right.have_children and np.random.rand() > self.random_paste_prob and self.__is_valid_depth(node_depth + curr.right.depth - 1):
                     self.__random_replace(node, node_depth, curr.right, self.__update_probability(p))
                 else:
                     curr.right = node.copy()
                     curr.right.update_depth(curr.depth + 1)
         elif curr == self.root:
             self.root = node.copy()
+            self.root.update_depth(1)
 
         return
 
     def random_paste_node(self, node):
         paste_node = node.copy()
-        paste_node.update_depth(0)
+        paste_node.update_depth(1)
         node_depth = paste_node.get_max_depth()
         self.__random_replace(paste_node, node_depth, self.root)
 
@@ -175,7 +176,7 @@ class Tree:
 
             return indent + str(curr) + "\n" + left + "\n" + right
         
-        return indent + str(curr)
+        return indent + str(curr) + self.root.get_max_depth()   
 
     def __str__(self):
         return self.toString(self.root)
