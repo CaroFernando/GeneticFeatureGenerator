@@ -1,0 +1,4 @@
+**/node_modules/
+**/.ipynb_checkpoints/
+**/archive/images/
+**/__pycache__/
