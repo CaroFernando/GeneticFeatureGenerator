@@ -1,5 +1,4 @@
 import numpy as np
-# from same folder import all from Node
 import os
 import sys
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -7,13 +6,15 @@ from Node import *
 from scipy.stats import rankdata
 
 class GeneticFeatureGenerator:
-    def __init__(self, operations, operation_names = None, popsize = 100, maxiter = 200, clone_prob = 0.3, mutation_rate = 0.05):
+
+    def __init__(self, operations, operation_names = None, popsize = 100, maxiter = 200, clone_prob = 0.3, mutation_rate = 0.05, max_tree_depth = 7):
         self.operations = operations
         self.operation_names = operation_names
         self.popsize = popsize
         self.maxiter = maxiter
         self.clone_prob = clone_prob
         self.mutation_rate = mutation_rate
+        self.max_tree_depth = max_tree_depth
 
     def corr(self, X, Y):
         assert len(X) == len(Y)
@@ -47,7 +48,7 @@ class GeneticFeatureGenerator:
         t.random_paste_node(t.create_random_node())
 
     def init_generation(self, no_cols):
-        return [Tree(self.operations, no_cols, self.operation_names) for _ in range(self.popsize)]
+        return [Tree(self.operations, no_cols, self.operation_names, max_init_depth=self.max_tree_depth) for _ in range(self.popsize)]
 
     def optimize(self, data, target, verbose = False):
         generation = self.init_generation(data.shape[1])

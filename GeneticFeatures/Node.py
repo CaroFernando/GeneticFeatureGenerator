@@ -6,6 +6,7 @@ class Node:
     left = None
     right = None
     have_children = False
+    depth = 0
 
     def __init__(self):
         pass
@@ -18,6 +19,23 @@ class Node:
 
     def copy(self):
         return copy.deepcopy(self)
+
+    def update_depth(self, depth):
+        self.depth = depth
+        if self.have_children:
+            if self.left is not None:
+                self.left.update_depth(depth+1)
+            if self.right is not None:
+                self.right.update_depth(depth+1)
+        return
+
+    def get_max_depth(self):
+        if self is None:
+            return 0
+        if self.have_children:
+            return max(self.left.get_max_depth(), self.right.get_max_depth())
+        else:
+            return self.depth
 
 class OperationNode(Node):
     def __init__(self, op, name = "OperationNode"):
@@ -53,102 +71,92 @@ class ScalarNode(Node):
         return "ScalarNode " + str(self.scalar)
 
 class Tree:
-    def create_random_node(self, curr_depth = 0, max_depth = 5):
-        # choose random type of node between operation, data and scalar 
-        if curr_depth == self.max_init_depth:
-            # choose only data or scalar
-            if np.random.rand() < 0.5:
-                dataind = np.random.randint(0, self.nocols)
-                return DataNode(dataind, "DataNode " + str(dataind))
-            else:
-                return ScalarNode(np.random.uniform(self.scalar_range[0], self.scalar_range[1]))
-        else:
-            # 80 % chance to create operation node
-            p = np.array([0.6, 0.2, 0.2])
-            node_type = np.random.choice([0, 1, 2], p=p.ravel())
 
-            if node_type == 0:
-                # operation
-                opind = np.random.randint(0, len(self.operations))
-                node = OperationNode(self.operations[opind], self.operation_names[opind] if self.operation_names is not None else "OperationNode " + str(opind))
-                node.left = self.create_random_node(curr_depth + 1, max_depth)
-                node.right = self.create_random_node(curr_depth + 1, max_depth)
-
-                return node
-
-            elif node_type == 1:
-                # data
-                dataind = np.random.randint(0, self.nocols)
-                return DataNode(dataind, "DataNode " + str(dataind))
-            else:
-                # scalar
-                return ScalarNode(np.random.uniform(self.scalar_range[0], self.scalar_range[1]))
-
-    def init_random(self):
-        self.root = self.create_random_node()
-
-    def __init__(self, operations, nocols, operation_names = None, scalar_range = [0, 1], max_init_depth = 5, random_paste_prob=0.25):
+    def __init__(self, operations, nocols, operation_names = None, scalar_range = [0, 1], max_init_depth = 7, random_paste_prob=0.25):
         self.operations = operations
         self.nocols = nocols
         self.operation_names = operation_names
         self.scalar_range = scalar_range
         self.max_init_depth = max_init_depth
         self.random_paste_prob = random_paste_prob
-
         self.root = None
         self.init_random()
+
+    def create_random_unit_node(self):
+        if np.random.rand() < 0.5:
+            dataind = np.random.randint(0, self.nocols)
+            return DataNode(dataind, "DataNode " + str(dataind))
+        else:
+            return ScalarNode(np.random.uniform(self.scalar_range[0], self.scalar_range[1]))
+
+    def create_random_node(self, curr_depth = 0):
+        # choose random type of node between operation, data and scalar 
+        if curr_depth == self.max_init_depth:
+            # choose only data or scalar
+            return self.create_random_unit_node()
+        else:
+            # 80 % chance to create operation node
+            p = np.array([0.8, 0.2])
+            node_type = np.random.choice([0, 1], p=p.ravel())
+            if node_type == 0:
+                # operation
+                opind = np.random.randint(0, len(self.operations))
+                node = OperationNode(self.operations[opind], self.operation_names[opind] if self.operation_names is not None else "OperationNode " + str(opind))
+                node.left = self.create_random_node(curr_depth + 1)
+                node.right = self.create_random_node(curr_depth + 1)
+                return node
+            else:
+                # data or scalar
+                return self.create_random_unit_node()
+
+    def init_random(self):
+        self.root = self.create_random_node()
+        self.root.update_depth(0)
 
     def __get_random_node(self, curr, p = 0.1):
         if np.random.rand() < p:
             return curr
-
         if curr.have_children:
             if np.random.rand() < 0.5:
                 return self.__get_random_node(curr.left, min(p + 0.025, 0.4))
             else:
                 return self.__get_random_node(curr.right, min(p + 0.025, 0.4))
-
         return curr
 
     def get_random_node(self):
         return self.__get_random_node(self.root).copy()
 
-    def __random_replace(self, node, curr, p = 0.15):
-        if curr is self.root:
-            if curr.have_children:
-                if np.random.rand() < 0.5:
-                    if curr.left.have_children and np.random.rand() > p:
-                        self.__random_replace(node, curr.left, min(p * 1.01, 0.7))
-                    else:
-                        curr.left = node.copy()
-                else:
-                    if curr.right.have_children and np.random.rand() > p:
-                        self.__random_replace(node, curr.right, min(p * 1.01, 0.7))
-                    else:
-                        curr.right = node.copy()
+    def __is_valid_depth(self, depth_a, depth_b):
+        return depth_a + depth_b <= self.max_init_depth
 
-            else:
-                self.root = node.copy()
-        
-            return 
+    def __update_probability(self, p):
+        return min(p * 1.01, 0.7)
+
+    def __random_replace(self, node, node_depth, curr, p = 0.15):
 
         if curr.have_children:
             if np.random.rand() < 0.5:
-                if curr.left.have_children and np.random.rand() > self.random_paste_prob:
-                    self.__random_replace(node, curr.left)
+                if curr.left.have_children and np.random.rand() > self.random_paste_prob and self.__is_valid_depth(node_depth, curr.left.depth):
+                    self.__random_replace(node, node_depth, curr.left)
                 else:
                     curr.left = node.copy()
+                    curr.left.update_depth(curr.depth + 1)
             else:
-                if curr.right.have_children and np.random.rand() > self.random_paste_prob:
-                    self.__random_replace(node, curr.right)
+                if curr.right.have_children and np.random.rand() > self.random_paste_prob and self.__is_valid_depth(node_depth, curr.right.depth):
+                    self.__random_replace(node, node_depth, curr.right)
                 else:
                     curr.right = node.copy()
+                    curr.right.update_depth(curr.depth + 1)
+        elif curr == self.root:
+            self.root = node.copy()
 
         return
 
-
     def random_paste_node(self, node):
-        self.__random_replace(node, self.root)
+        paste_node = node.copy()
+        paste_node.update_depth(0)
+        node_depth = paste_node.get_max_depth()
+        self.__random_replace(paste_node, node_depth, self.root)
 
     def toString(self, curr, indent = ""):
         if curr is None:
@@ -164,8 +172,6 @@ class Tree:
             if curr.right is not None:
                 right = self.toString(curr.right, indent + "\t")
 
-            #print(str(curr), "(", left, " ", right, ")")
-
             return indent + str(curr) + "\n" + left + "\n" + right
         
         return indent + str(curr)
@@ -179,13 +185,12 @@ class Tree:
     def copy(self):
         return copy.deepcopy(self)
 
-
     def __erase(self, curr):
         if curr.have_children:
             self.__erase(curr.left)
             self.__erase(curr.right)
-
         del curr
+
     def erase(self):
         self.__erase(self.root)
         self.root = None
