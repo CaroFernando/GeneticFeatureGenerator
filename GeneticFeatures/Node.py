@@ -3,6 +3,7 @@ import numpy as np
 import copy
 
 class Node:
+
     left = None
     right = None
     have_children = False
@@ -137,13 +138,13 @@ class Tree:
         if curr.have_children:
             if np.random.rand() < 0.5:
                 if curr.left.have_children and np.random.rand() > self.random_paste_prob and self.__is_valid_depth(node_depth, curr.left.depth):
-                    self.__random_replace(node, node_depth, curr.left)
+                    self.__random_replace(node, node_depth, curr.left, self.__update_probability(p))
                 else:
                     curr.left = node.copy()
                     curr.left.update_depth(curr.depth + 1)
             else:
                 if curr.right.have_children and np.random.rand() > self.random_paste_prob and self.__is_valid_depth(node_depth, curr.right.depth):
-                    self.__random_replace(node, node_depth, curr.right)
+                    self.__random_replace(node, node_depth, curr.right, self.__update_probability(p))
                 else:
                     curr.right = node.copy()
                     curr.right.update_depth(curr.depth + 1)

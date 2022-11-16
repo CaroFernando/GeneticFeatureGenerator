@@ -1,4 +1,5 @@
-# Auto detect text files and perform LF normalization
+**/node_modules/
+**/.ipynb_checkpoints/
+**/archive/images/
+**/__pycache__/
 * text=auto
-__pycache__/
-*.py[cod]
