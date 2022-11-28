@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import StandardScaler, MinMaxScaler
 from GeneticFeatures.GeneticFeatureGenerator import *
 from GeneticFeatures.Node import *
 
@@ -13,6 +13,8 @@ from GeneticFeatures.Node import *
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.neural_network import MLPRegressor
 from sklearn.ensemble import GradientBoostingRegressor
+from sklearn.linear_model import SGDRegressor
+from sklearn.linear_model import LogisticRegression
 
 class tester:
     def __init__(self, dataset, target, generator, nofeatures, nosplits, maxsplitsize, verbose = False, test_size = 0.2, random_state = 42):
@@ -59,9 +61,10 @@ class tester:
         return new_train_data, new_test_data
 
     
-    def test_model(self, model, kargs, notests):
+    def test_model(self, model, kargs, notests, show_iterations):
         acc_results = np.zeros(6)
         for i in range(notests):
+
             oldmodel = model(**kargs)
             newmodel = model(**kargs)
             oldmodel.fit(self.X_train, self.y_train)
@@ -85,28 +88,35 @@ class tester:
 
             acc_results += np.array([old_mse, old_r2, old_mae, new_mse, new_r2, new_mae])
 
+            if (i+1) % show_iterations == 0:
+                print(f'Iteration {i} - MSE {old_mse}, R2 {old_r2}, MAE {old_mae}, NEW_MSE {new_mse}, NEW_R2 {new_r2}, NEW_MAE {new_mae}')
+
         acc_results /= notests
         results = {'Model': oldmodel.__class__.__name__, 'MSE': acc_results[0], 'R2': acc_results[1], 'MAE': acc_results[2], 'NEW_MSE': acc_results[3], 'NEW_R2': acc_results[4], 'NEW_MAE': acc_results[5]}
         self.tests = pd.concat([self.tests, pd.DataFrame(results, index = [0])], ignore_index = True)
 
-    def test_models(self, models = None, kargs = None, notests = 1):
-        if models == None:
-            models, kargs = self.get_default_models()
+    def test_models(self, models = None, kargs = None, notests = 1, show_iterations = 5):
+        # if models == None:
+        models, kargs = self.get_default_models()
 
         for model, karg in zip(models, kargs):
-            self.test_model(model, karg, notests)
+            self.test_model(model, karg, notests, show_iterations)
 
     def get_tests(self):
         return self.tests
 
     def get_default_models(self):
-        models =  [RandomForestRegressor, MLPRegressor, GradientBoostingRegressor]
+        models =  [
+            RandomForestRegressor, 
+            # MLPRegressor, 
+            SGDRegressor,
+            GradientBoostingRegressor]
         kargs = [
             {'n_estimators': 100, 'max_depth': 10, 'random_state': 42},
-            {'hidden_layer_sizes': (100, 100, 100), 'max_iter': 2000},
+            # {'hidden_layer_sizes': (64, 32, 16), 'max_iter': 1000},
+            {'max_iter': 1000, 'tol': 1e-3},
             {'n_estimators': 100, 'max_depth': 10, 'random_state': 42, 'learning_rate': 0.1}
         ]
-
         return models, kargs
 
     
