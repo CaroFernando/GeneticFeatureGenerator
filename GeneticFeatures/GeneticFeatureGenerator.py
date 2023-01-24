@@ -99,6 +99,8 @@ class MultiFeatureGenerator:
         self.max_split_size = max_split_size
         self.splitsize = int(np.floor(self.data.shape[0] / self.no_splits))
         self.indexes = np.arange(len(self.data), dtype=np.int32)
+        # set numpy random seed
+        np.random.seed(np.random.randint(0, 1000000))
         np.random.shuffle(self.indexes)
         self.current_split = 0
         self.feature_generator = feature_generator

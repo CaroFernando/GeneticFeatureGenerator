@@ -16,6 +16,7 @@ from sklearn.ensemble import GradientBoostingRegressor
 from sklearn.linear_model import SGDRegressor
 from sklearn.linear_model import LogisticRegression
 from sklearn.svm import SVR
+
 class tester:
     def __init__(self, dataset, target, generator_kargs, nofeatures, nosplits, maxsplitsize, verbose = False, test_size = 0.2, random_state = 42):
         self.dataset = dataset
@@ -23,6 +24,18 @@ class tester:
         self.test_size = test_size
         self.random_state = random_state
         self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(self.dataset, self.target, test_size = self.test_size)  
+
+        self.X_train_scaler = StandardScaler()
+        self.X_train_scaler.fit(self.X_train)
+        self.X_train_scaled = self.X_train_scaler.transform(self.X_train)
+
+        self.y_train_scaler = StandardScaler()
+        self.y_train_scaler.fit(self.y_train.reshape(-1, 1))
+        self.y_train_scaled = self.y_train_scaler.transform(self.y_train.reshape(-1, 1))
+
+        self.X_test_scaled = self.X_train_scaler.transform(self.X_test)
+        self.y_test_scaled = self.y_train_scaler.transform(self.y_test.reshape(-1, 1))
+
 
         self.generator_kargs = generator_kargs 
         
@@ -38,14 +51,14 @@ class tester:
     
     def create_data(self):
         self.trees = [i for i in self.multifeature_generator]
-        new_cols_test_data = [t(self.X_test) for t in self.trees]
-        new_cols_train_data = [t(self.X_train) for t in self.trees]
+        new_cols_test_data = [t(self.X_test_scaled) for t in self.trees]
+        new_cols_train_data = [t(self.X_train_scaled) for t in self.trees]
 
         new_X_test = np.array(new_cols_test_data).T
         new_X_train = np.array(new_cols_train_data).T
 
-        new_train_data = np.concatenate((self.X_train, new_X_train), axis = 1)
-        new_test_data = np.concatenate((self.X_test, new_X_test), axis = 1)
+        new_train_data = np.concatenate((self.X_train_scaled, new_X_train), axis = 1)
+        new_test_data = np.concatenate((self.X_test_scaled, new_X_test), axis = 1)
 
         return new_train_data, new_test_data
 
@@ -109,8 +122,8 @@ class tester:
 
 
             self.multifeature_generator = MultiFeatureGenerator(
-                self.X_train, 
-                self.y_train, 
+                self.X_train_scaled, 
+                self.y_train_scaled, 
                 generator, 
                 self.nofeatures, 
                 self.nosplits, 
