@@ -112,7 +112,7 @@ class tester:
             SGDRegressor,
             GradientBoostingRegressor]
         kargs = [
-            {'n_estimators': 100, 'max_depth': 10, 'random_state': 42},
+            {'n_estimators': 100, 'max_depth': 10},
             # {'hidden_layer_sizes': (64, 32, 16), 'max_iter': 1000},
             {'max_iter': 1000, 'tol': 1e-3},
             {'n_estimators': 100, 'max_depth': 10, 'random_state': 42, 'learning_rate': 0.1}
