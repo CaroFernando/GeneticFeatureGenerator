@@ -69,20 +69,16 @@ def make_boxplots(tests, save_path):
     # save plot
     plt.savefig(f"plots/{save_path}.png")
 
-
 def generate_plot_from_csv(path, name):
     print(name)
     models = ['GradientBoostingRegressor', 'MLPRegressor', 'RandomForestRegressor', 'SGDRegressor']
     tests = dict()
 
     complete_means = pd.DataFrame(columns=['Model', 'MSE', 'NEW_MSE', 'R2', 'NEW_R2'])
-
-
     
     for model_name in models:
         tests[model_name] = pd.read_csv(f"{path}/{name}/{model_name}.csv")
         means = tests[model_name].mean()
-        # make dataframe of columns with metrics and rows with the name of the model
         means = pd.DataFrame(means).transpose()
         means = means.drop(columns=['Unnamed: 0', 'MAE', 'NEW_MAE'])
         means['Model'] = model_name
@@ -90,8 +86,24 @@ def generate_plot_from_csv(path, name):
         means = means[['Model', 'MSE', 'NEW_MSE', 'R2', 'NEW_R2']]
         complete_means = pd.concat([complete_means, means], ignore_index=True)
 
+    complete_means = complete_means.set_index('Model')
+
+    # bold max values between new and old
+    mask1 = complete_means['MSE'] < complete_means['NEW_MSE']
+    mask2 = complete_means['NEW_MSE'] < complete_means['MSE']
+
+    complete_means.loc[mask1, 'MSE'] = complete_means.loc[mask1, 'MSE'].apply(lambda x: f"\\textbf{{{x}}}")
+    complete_means.loc[mask2, 'NEW_MSE'] = complete_means.loc[mask2, 'NEW_MSE'].apply(lambda x: f"\\textbf{{{x}}}")
+
+    mask1 = complete_means['R2'] > complete_means['NEW_R2']
+    mask2 = complete_means['NEW_R2'] > complete_means['R2']
+
+    complete_means.loc[mask1, 'R2'] = complete_means.loc[mask1, 'R2'].apply(lambda x: f"\\textbf{{{x}}}")
+    complete_means.loc[mask2, 'NEW_R2'] = complete_means.loc[mask2, 'NEW_R2'].apply(lambda x: f"\\textbf{{{x}}}")
+
     print(complete_means)
-    complete_means.to_latex(f"plots/{name}.tex", index=False)
+    complete_means.style.to_latex(f"plots/latex/{name}.tex")
+
     make_boxplots(tests, name)
     return
 
