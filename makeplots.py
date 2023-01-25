@@ -71,11 +71,27 @@ def make_boxplots(tests, save_path):
 
 
 def generate_plot_from_csv(path, name):
-    print('Here')
+    print(name)
     models = ['GradientBoostingRegressor', 'MLPRegressor', 'RandomForestRegressor', 'SGDRegressor']
     tests = dict()
+
+    complete_means = pd.DataFrame(columns=['Model', 'MSE', 'NEW_MSE', 'R2', 'NEW_R2'])
+
+
+    
     for model_name in models:
         tests[model_name] = pd.read_csv(f"{path}/{name}/{model_name}.csv")
+        means = tests[model_name].mean()
+        # make dataframe of columns with metrics and rows with the name of the model
+        means = pd.DataFrame(means).transpose()
+        means = means.drop(columns=['Unnamed: 0', 'MAE', 'NEW_MAE'])
+        means['Model'] = model_name
+
+        means = means[['Model', 'MSE', 'NEW_MSE', 'R2', 'NEW_R2']]
+        complete_means = pd.concat([complete_means, means], ignore_index=True)
+
+    print(complete_means)
+    complete_means.to_latex(f"plots/{name}.tex", index=False)
     make_boxplots(tests, name)
     return
 
